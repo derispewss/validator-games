@@ -1,107 +1,69 @@
 import { hitCoda, Result } from '../utils'
 
+type LaServer = {
+  name: string
+  zoneId: number
+}
+
+/** Complete server list for LifeAfter */
+const SERVER_MAP: Record<string, LaServer> = {
+  miskatown:      { name: 'MiskaTown',      zoneId: 500001 },
+  sandcastle:     { name: 'SandCastle',     zoneId: 500002 },
+  mouthswamp:     { name: 'MouthSwamp',     zoneId: 500003 },
+  redwoodtown:    { name: 'RedwoodTown',    zoneId: 500004 },
+  obelisk:        { name: 'Obelisk',        zoneId: 500005 },
+  newland:        { name: 'NewLand',        zoneId: 500006 },
+  chaosoutpost:   { name: 'ChaosOutpost',   zoneId: 500007 },
+  ironstride:     { name: 'IronStride',     zoneId: 500008 },
+  crystalthornsea: { name: 'CrystalthornSea', zoneId: 500009 },
+  fallforest:     { name: 'FallForest',     zoneId: 510001 },
+  mountsnow:      { name: 'MountSnow',      zoneId: 510002 },
+  nancycity:      { name: 'NancyCity',      zoneId: 520001 },
+  charlestown:    { name: 'CharlesTown',    zoneId: 520002 },
+  snowhighlands:  { name: 'SnowHighlands',  zoneId: 520003 },
+  santopany:      { name: 'Santopany',      zoneId: 520004 },
+  levincity:      { name: 'LevinCity',      zoneId: 520005 },
+  milestone:      { name: 'MileStone',      zoneId: 520006 },
+  chaoscity:      { name: 'ChaosCity',      zoneId: 520007 },
+  twinislands:    { name: 'TwinIslands',    zoneId: 520008 },
+  hopewall:       { name: 'HopeWall',       zoneId: 520009 },
+  labyrinthsea:   { name: 'LabyrinthSea',   zoneId: 520010 },
+}
+
+/**
+ * Validates a LifeAfter account via Codashop.
+ * @param zone - Server name (case-insensitive, spaces ignored).
+ */
 export default async function la(id: number, zone: string): Promise<Result> {
-  const zoneLC = zone.toLowerCase()
-  let sn
-  let sv
-  switch (true) {
-    case zoneLC.includes('miskatown'):
-      sn = 'MiskaTown'
-      sv = 500001
-      break
-    case zoneLC.includes('sandcastle'):
-      sn = 'SandCastle'
-      sv = 500002
-      break
-    case zoneLC.includes('mouthswamp'):
-      sn = 'MouthSwamp'
-      sv = 500003
-      break
-    case zoneLC.includes('redwoodtown'):
-      sn = 'RedwoodTown'
-      sv = 500004
-      break
-    case zoneLC.includes('obelisk'):
-      sn = 'Obelisk'
-      sv = 500005
-      break
-    case zoneLC.includes('newland'):
-      sn = 'NewLand'
-      sv = 500006
-      break
-    case zoneLC.includes('chaosoutpost'):
-      sn = 'ChaosOutpost'
-      sv = 500007
-      break
-    case zoneLC.includes('ironstride'):
-      sn = 'IronStride'
-      sv = 500008
-      break
-    case zoneLC.includes('crystalthornsea'):
-      sn = 'CrystalthornSea'
-      sv = 500009
-      break
-    case zoneLC.includes('fallforest'):
-      sn = 'FallForest'
-      sv = 510001
-      break
-    case zoneLC.includes('mountsnow'):
-      sn = 'MountSnow'
-      sv = 510002
-      break
-    case zoneLC.includes('nancycity'):
-      sn = 'NancyCity'
-      sv = 520001
-      break
-    case zoneLC.includes('charlestown'):
-      sn = 'CharlesTown'
-      sv = 520002
-      break
-    case zoneLC.includes('snowhighlands'):
-      sn = 'SnowHighlands'
-      sv = 520003
-      break
-    case zoneLC.includes('santopany'):
-      sn = 'Santopany'
-      sv = 520004
-      break
-    case zoneLC.includes('levincity'):
-      sn = 'LevinCity'
-      sv = 520005
-      break
-    case zoneLC.includes('milestone'):
-      sn = 'MileStone'
-      sv = 520006
-      break
-    case zoneLC.includes('chaoscity'):
-      sn = 'ChaosCity'
-      sv = 520007
-      break
-    case zoneLC.includes('twinislands'):
-      sn = 'TwinIslands'
-      sv = 520008
-      break
-    case zoneLC.includes('hopewall'):
-      sn = 'HopeWall'
-      sv = 520009
-      break
-    case zoneLC.includes('labyrinthsea'):
-      sn = 'LabyrinthSea'
-      sv = 520010
-      break
-    default:
-      return {
-        success: false,
-        message: 'Not found',
-      }
+  const key = zone.toLowerCase().replace(/\s+/g, '')
+  const server = Object.entries(SERVER_MAP).find(([k]) => key.includes(k))?.[1]
+
+  if (!server) {
+    return { success: false, message: 'Not found' }
   }
-  const body = `voucherPricePoint.id=45713&voucherPricePoint.price=15000&voucherPricePoint.variablePrice=0&user.userId=${id}&user.zoneId=${sv}&voucherTypeName=NETEASE_LIFEAFTER&shopLang=id_ID`
+
+  const body = [
+    'voucherPricePoint.id=45713',
+    'voucherPricePoint.price=15000',
+    'voucherPricePoint.variablePrice=0',
+    `user.userId=${id}`,
+    `user.zoneId=${server.zoneId}`,
+    'voucherTypeName=NETEASE_LIFEAFTER',
+    'shopLang=id_ID',
+  ].join('&')
+
   const data = await hitCoda(body)
+  const username = data.confirmationFields?.username
+
+  if (!username) {
+    return { success: false, message: 'Not found' }
+  }
+
   return {
     success: true,
     game: 'LifeAfter',
     id,
-    server: sn,
-    name: data.confirmationFields.username
+    server: server.name,
+    name: username,
   }
 }

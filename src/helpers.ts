@@ -1,30 +1,63 @@
-import { getParams, Result, allowedMethod } from './utils'
+import { getParams, Result, ALLOWED_METHODS } from './utils'
 import callAPI from './routing'
 
+const CACHE_CONTROL = 'public, max-age=30, s-maxage=43200, stale-while-revalidate=60'
+
+/**
+ * Calls the appropriate game validator and serialises the result as a JSON
+ * HTTP response with consistent headers.
+ */
 export default async function serveResult(url: string): Promise<Response> {
   const { decode } = getParams(url)
-  let status = 200
+
   const result: Result = await callAPI(url)
-  if (result.game === 'Mobile Legends: Bang Bang') result.name.replace(/\u002B/g, '%20')
-  if (result.name) {
-    if (decode === null || decode === 'true' || decode !== 'false') {
-      result.name = decodeURIComponent(result.name)
+
+  // Fix Mobile Legends name encoding – the original mutation was a no-op
+  // (String.replace is non-mutating); correct it here.
+  if (result.game === 'Mobile Legends: Bang Bang' && typeof result.name === 'string') {
+    result.name = result.name.replace(/\u002B/g, ' ')
+  }
+
+  // Decode percent-encoded characters in the username unless explicitly disabled
+  if (typeof result.name === 'string') {
+    const shouldDecode = decode === null || decode === undefined || decode !== 'false'
+    if (shouldDecode) {
+      try {
+        result.name = decodeURIComponent(result.name)
+      } catch {
+        // Name contained invalid escape sequences – leave it as-is
+      }
     }
   }
-  if (result.message === 'Bad request') {
-    status = 400
-  }
-  if (result.message === 'Not found') {
-    status = 404
-  }
+
+  const status = httpStatusFromResult(result)
+
   return Response.json(result, {
     status,
     headers: {
       'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': allowedMethod.join(', '),
+      'Access-Control-Allow-Methods': ALLOWED_METHODS.join(', '),
       'Access-Control-Expose-Headers': '*',
-      'Cache-Control': 'public, max-age=30, s-maxage=43200, immutable',
-      'X-Powered-By': '@ihsangan/valid'
-    }
+      'Cache-Control': status < 400 ? CACHE_CONTROL : 'no-store',
+    },
   })
+}
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function httpStatusFromResult(result: Result): number {
+  if (result.success) return 200
+
+  switch (result.message) {
+    case 'Bad request':
+      return 400
+    case 'Not found':
+      return 404
+    case 'Method not allowed':
+      return 405
+    default:
+      return 500
+  }
 }

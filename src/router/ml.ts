@@ -1,20 +1,37 @@
-import { hitCoda, Result } from '../utils'
+import { Result } from '../utils'
 
+interface MlbbApiResponse {
+  name?: string
+  countryName?: string
+}
+
+/**
+ * Validates a Mobile Legends: Bang Bang account.
+ * Uses a dedicated MLBB validation endpoint (not Codashop).
+ */
 export default async function ml(id: number, zone: number): Promise<Result> {
-/*
-Kamu bisa langsung kirim request ke: https://mlbb-api.isan.eu.org/find
-Dengan menyertakan parameter id & zone
-Endpoint ini di deploy di Vercel dengan WAF standar
-Meringirim banyak request dalam waktu singkat dapat menyebabkan WAF aktif
-*/
-  const request = await fetch(`https://mlbb-api.isan.eu.org/find?id=${id}&zone=${zone}`)
-  const data = await request.json()
+  if (!zone) {
+    return { success: false, message: 'Bad request' }
+  }
+
+  const response = await fetch(`https://mlbb-api.isan.eu.org/find?id=${id}&zone=${zone}`)
+
+  if (!response.ok) {
+    return { success: false, message: 'Not found' }
+  }
+
+  const data = await response.json<MlbbApiResponse>()
+
+  if (!data.name) {
+    return { success: false, message: 'Not found' }
+  }
+
   return {
     success: true,
     game: 'Mobile Legends: Bang Bang',
     id,
     server: zone,
     name: data.name,
-    country: data.countryName
+    country: data.countryName,
   }
 }

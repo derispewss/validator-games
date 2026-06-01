@@ -1,6 +1,13 @@
-name = "validator-games"
-main = "./src/index.ts"
-workers_dev = true
-compatibility_date = "2026-01-01"
+name                 = "validator-games"
+main                 = "./src/index.ts"
+compatibility_date   = "2026-01-01"
+compatibility_flags  = ["nodejs_compat"]
+
+# Do not publish to *.workers.dev — serve only through your own domain
+workers_dev = false
+
 [observability]
 enabled = true
+
+[limits]
+cpu_ms = 50
