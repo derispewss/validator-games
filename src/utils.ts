@@ -16,7 +16,7 @@ export async function parseRequest(request: Request): Promise<string> {
       let data: Record<string, string> = {}
 
       if (contentType.includes('application/json')) {
-        const json = await request.json<Record<string, unknown>>()
+        const json = await request.json()
         for (const [key, value] of Object.entries(json)) {
           if (value !== null && value !== undefined) {
             data[key] = String(value)
@@ -71,7 +71,8 @@ export async function hitCoda(body: string): Promise<CodaResponse> {
     throw new Error(`Upstream responded with HTTP ${response.status}`)
   }
 
-  return response.json<CodaResponse>()
+  const data = await response.json()
+  return data as CodaResponse
 }
 
 // ---------------------------------------------------------------------------
