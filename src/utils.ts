@@ -17,9 +17,11 @@ export async function parseRequest(request: Request): Promise<string> {
 
       if (contentType.includes('application/json')) {
         const json = await request.json()
-        for (const [key, value] of Object.entries(json)) {
-          if (value !== null && value !== undefined) {
-            data[key] = String(value)
+        if (json && typeof json === 'object' && !Array.isArray(json)) {
+          for (const [key, value] of Object.entries(json)) {
+            if (value !== null && value !== undefined) {
+              data[key] = String(value)
+            }
           }
         }
       } else if (contentType.includes('application/x-www-form-urlencoded')) {
