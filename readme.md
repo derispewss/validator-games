@@ -94,14 +94,17 @@ Origin: https://tokomu.com
 
 ### 2.2 Format Response
 
+Semua endpoint kini menggunakan **Template Response Rata (Flat)** yang seragam. Setiap key berikut **selalu ada di setiap response** (baik sukses maupun gagal), dengan nilai `null` jika tidak tersedia/tidak relevan untuk game tersebut.
+
 #### Response Sukses (HTTP 200 OK)
 Jika akun game ditemukan dan valid:
 ```json
 {
   "success": true,
+  "message": "Success",
   "game": "Mobile Legends: Bang Bang",
-  "id": 123456789,
-  "server": 2202,
+  "id": "123456789",
+  "server": "2202",
   "name": "SuperPlayer",
   "country": "ID"
 }
@@ -112,7 +115,12 @@ Jika data tidak valid atau akun tidak ditemukan:
 ```json
 {
   "success": false,
-  "message": "Not found"
+  "message": "Not found",
+  "game": null,
+  "id": null,
+  "server": null,
+  "name": null,
+  "country": null
 }
 ```
 
@@ -121,7 +129,12 @@ Jika request dikirim dari domain browser yang tidak terdaftar di `ALLOWED_ORIGIN
 ```json
 {
   "success": false,
-  "message": "Forbidden"
+  "message": "Forbidden",
+  "game": null,
+  "id": null,
+  "server": null,
+  "name": null,
+  "country": null
 }
 ```
 

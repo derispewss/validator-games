@@ -107,3 +107,25 @@ export interface Result {
   country?: string
   message?: string
 }
+
+export interface StandardResponse {
+  success: boolean
+  message: string | null
+  game: string | null
+  id: string | null
+  server: string | null
+  name: string | null
+  country: string | null
+}
+
+export function toStandardResponse(result: Partial<Result> & { success: boolean }): StandardResponse {
+  return {
+    success: result.success,
+    message: result.message !== undefined && result.message !== null ? String(result.message) : (result.success ? 'Success' : 'Unknown error'),
+    game: result.game !== undefined && result.game !== null ? String(result.game) : null,
+    id: result.id !== undefined && result.id !== null ? String(result.id) : null,
+    server: result.server !== undefined && result.server !== null ? String(result.server) : null,
+    name: result.name !== undefined && result.name !== null ? String(result.name) : null,
+    country: result.country !== undefined && result.country !== null ? String(result.country) : null,
+  }
+}

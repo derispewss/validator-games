@@ -1,5 +1,6 @@
-import { getParams, Result, ALLOWED_METHODS } from './utils'
+import { getParams, Result, ALLOWED_METHODS, toStandardResponse } from './utils'
 import callAPI from './routing'
+import { GAMES } from './games'
 
 const CACHE_CONTROL = 'public, max-age=30, s-maxage=43200, stale-while-revalidate=60'
 
@@ -8,7 +9,23 @@ const CACHE_CONTROL = 'public, max-age=30, s-maxage=43200, stale-while-revalidat
  * HTTP response with consistent headers.
  */
 export default async function serveResult(url: string): Promise<Response> {
-  const { decode } = getParams(url)
+  const { path, decode } = getParams(url)
+
+  if (path === '/games' || path === '/games/') {
+    return Response.json({
+      success: true,
+      message: 'Success',
+      games: GAMES,
+    }, {
+      status: 200,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': ALLOWED_METHODS.join(', '),
+        'Access-Control-Expose-Headers': '*',
+        'Cache-Control': 'public, max-age=3600, s-maxage=43200',
+      },
+    })
+  }
 
   const result: Result = await callAPI(url)
 
@@ -31,8 +48,9 @@ export default async function serveResult(url: string): Promise<Response> {
   }
 
   const status = httpStatusFromResult(result)
+  const standardResponse = toStandardResponse(result)
 
-  return Response.json(result, {
+  return Response.json(standardResponse, {
     status,
     headers: {
       'Access-Control-Allow-Origin': '*',

@@ -1,4 +1,4 @@
-import { ALLOWED_METHODS, parseRequest } from './utils'
+import { ALLOWED_METHODS, parseRequest, toStandardResponse } from './utils'
 import serveResult from './helpers'
 import type { Env } from './index'
 
@@ -40,7 +40,7 @@ export default async function handleRequest(request: Request, env: Env): Promise
   // ── Origin check (browser requests only — skip if no Origin header) ────────
   if (origin && !isAllowed) {
     return Response.json(
-      { success: false, message: 'Forbidden' },
+      toStandardResponse({ success: false, message: 'Forbidden' }),
       { status: 403 },
     )
   }
@@ -48,7 +48,7 @@ export default async function handleRequest(request: Request, env: Env): Promise
   // ── Method guard ──────────────────────────────────────────────────────────
   if (!ALLOWED_METHODS.includes(request.method as typeof ALLOWED_METHODS[number])) {
     return Response.json(
-      { success: false, message: 'Method not allowed' },
+      toStandardResponse({ success: false, message: 'Method not allowed' }),
       {
         status: 405,
         headers: {
