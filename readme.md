@@ -124,6 +124,22 @@ Jika data tidak valid atau akun tidak ditemukan:
 }
 ```
 
+#### Response List Game (HTTP 200 OK — Endpoint `/games`)
+Endpoint `/games` memiliki format response khusus yang mengembalikan daftar game dalam bentuk array:
+```json
+{
+  "success": true,
+  "message": "Success",
+  "games": [
+    {
+      "endpoint": "/ml",
+      "name": "Mobile Legends: Bang Bang",
+      "params": ["id (number)", "zone/server (number)"]
+    }
+  ]
+}
+```
+
 #### Response Akses Ditolak (HTTP 403 Forbidden)
 Jika request dikirim dari domain browser yang tidak terdaftar di `ALLOWED_ORIGINS`:
 ```json
@@ -146,7 +162,7 @@ Setiap response sukses/gagal dari API akan menyertakan beberapa header penting b
 | Header | Contoh Nilai | Deskripsi |
 |--------|-------------|-----------|
 | `Access-Control-Allow-Origin` | `https://tokomu.com` | Mengizinkan browser di domain tepercaya untuk membaca data. |
-| `Cache-Control` | `public, max-age=30, s-maxage=43200` | Pengaturan cache di sisi Cloudflare Edge network (12 jam) dan browser (30 detik). |
+| `Cache-Control` | `public, max-age=30, s-maxage=43200` | Pengaturan cache di sisi Cloudflare Edge network (12 jam) dan browser (30 detik). Khusus endpoint `/games`, cache browser selama 1 jam (`max-age=3600`). |
 | `X-Response-Time` | `45` | Durasi waktu proses API dalam satuan milidetik (ms). |
 | `Vary` | `Origin` | Menginstruksikan cache-proxy agar membedakan cache berdasarkan domain asal request. |
 
@@ -155,6 +171,50 @@ Setiap response sukses/gagal dari API akan menyertakan beberapa header penting b
 ## 3. Daftar Endpoint Game & Parameter
 
 Berikut adalah daftar endpoint untuk 16 game yang didukung:
+
+### 3.0 Endpoint Daftar Game (List Games)
+
+Endpoint ini digunakan untuk mendapatkan seluruh daftar game beserta parameter yang dapat divalidasi. Sangat berguna untuk menampilkan daftar game secara dinamis di halaman top-up toko Anda.
+
+- **Endpoint**: `/games`
+- **Metode**: `GET`, `HEAD`
+- **Parameter**: Tidak ada
+- **Cache**: 1 jam di browser, 12 jam di edge network
+
+#### Contoh Request:
+```http
+GET /games HTTP/1.1
+Host: validator-games.derisfirmansyah177.workers.dev
+```
+
+#### Response Sukses (HTTP 200 OK):
+```json
+{
+  "success": true,
+  "message": "Success",
+  "games": [
+    {
+      "endpoint": "/ml",
+      "name": "Mobile Legends: Bang Bang",
+      "params": ["id (number)", "zone/server (number)"]
+    },
+    {
+      "endpoint": "/ff",
+      "name": "Garena Free Fire",
+      "params": ["id (number)"]
+    },
+    {
+      "endpoint": "/valo",
+      "name": "VALORANT",
+      "params": ["id (string) - Format: Username#TAG"]
+    }
+  ]
+}
+```
+
+> **Catatan**: Daftar game di atas tidak lengkap (hanya contoh). Response asli akan mengembalikan 16 game secara lengkap. Field `params` menunjukkan parameter wajib yang harus dikirim saat melakukan validasi ke endpoint terkait. Parameter yang menyebutkan `number` berarti harus berupa angka, sedangkan `string` berarti bisa berupa teks bebas.
+
+---
 
 ### 3.1 Mobile Legends: Bang Bang
 - **Endpoint**: `/ml`
@@ -300,6 +360,43 @@ validasiAkunGame("ml", "123456789", "2202").then(result => {
   } else {
     alert(`Gagal Validasi: ${result.message}`);
   }
+});
+
+// Contoh mendapatkan daftar game yang tersedia:
+async function dapatkanDaftarGame() {
+  const baseUrl = "https://validator-games.derisfirmansyah177.workers.dev";
+
+  try {
+    const response = await fetch(`${baseUrl}/games`, {
+      method: "GET",
+      headers: { "Accept": "application/json" }
+    });
+
+    const data = await response.json();
+
+    if (data.success) {
+      console.log("Total game tersedia:", data.games.length);
+      data.games.forEach(game => {
+        console.log(`${game.name} → ${game.endpoint}`, game.params);
+      });
+    }
+
+    return data.games;
+  } catch (error) {
+    console.error("Gagal mengambil daftar game:", error);
+    return [];
+  }
+}
+
+// Contoh: render daftar game ke dalam elemen <select>
+dapatkanDaftarGame().then(games => {
+  const select = document.getElementById("gameSelect");
+  games.forEach(game => {
+    const option = document.createElement("option");
+    option.value = game.endpoint.replace("/", "");
+    option.textContent = game.name;
+    select.appendChild(option);
+  });
 });
 ```
 
