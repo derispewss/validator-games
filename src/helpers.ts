@@ -73,6 +73,8 @@ function httpStatusFromResult(result: Result): number {
       return 400
     case 'Not found':
       return 404
+    case 'Internal server error':
+      return 500
     case 'Method not allowed':
       return 405
     default:

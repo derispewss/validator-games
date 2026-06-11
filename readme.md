@@ -110,12 +110,40 @@ Jika akun game ditemukan dan valid:
 }
 ```
 
-#### Response Gagal (HTTP 404 Not Found atau 400 Bad Request)
-Jika data tidak valid atau akun tidak ditemukan:
+#### Response Gagal Validasi (HTTP 400 Bad Request)
+Jika parameter wajib tidak lengkap atau format request tidak valid:
+```json
+{
+  "success": false,
+  "message": "Bad request",
+  "game": null,
+  "id": null,
+  "server": null,
+  "name": null,
+  "country": null
+}
+```
+
+#### Response Data Tidak Ditemukan (HTTP 404 Not Found)
+Jika akun valid tetapi hasil pencarian ke layanan validator tidak menemukan data:
 ```json
 {
   "success": false,
   "message": "Not found",
+  "game": null,
+  "id": null,
+  "server": null,
+  "name": null,
+  "country": null
+}
+```
+
+#### Response Internal Server Error (HTTP 500 Internal Server Error)
+Jika terjadi gangguan tak terduga di sisi worker atau upstream service:
+```json
+{
+  "success": false,
+  "message": "Internal server error",
   "game": null,
   "id": null,
   "server": null,
@@ -165,6 +193,48 @@ Setiap response sukses/gagal dari API akan menyertakan beberapa header penting b
 | `Cache-Control` | `public, max-age=30, s-maxage=43200` | Pengaturan cache di sisi Cloudflare Edge network (12 jam) dan browser (30 detik). Khusus endpoint `/games`, cache browser selama 1 jam (`max-age=3600`). |
 | `X-Response-Time` | `45` | Durasi waktu proses API dalam satuan milidetik (ms). |
 | `Vary` | `Origin` | Menginstruksikan cache-proxy agar membedakan cache berdasarkan domain asal request. |
+
+> **Catatan penting**: Response dengan status `4xx` dan `5xx` menggunakan `Cache-Control: no-store`, sehingga tidak disimpan di browser maupun edge cache.
+
+### 2.4 Cara Handler Response di Client
+
+Pola paling aman adalah membaca `response.status` lebih dulu, lalu memproses body JSON hanya jika diperlukan. Dengan cara ini, aplikasi Anda bisa membedakan pesan untuk `400`, `404`, dan `500` secara jelas.
+
+```ts
+async function validatePlayer(endpoint: string, payload: Record<string, string>) {
+  const response = await fetch(endpoint, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+
+  const data = await response.json()
+
+  if (response.ok) {
+    return data
+  }
+
+  if (response.status === 400) {
+    throw new Error('Parameter request tidak lengkap atau tidak valid.')
+  }
+
+  if (response.status === 404) {
+    throw new Error('Akun tidak ditemukan. Periksa kembali ID dan server.')
+  }
+
+  if (response.status === 500) {
+    throw new Error('Terjadi gangguan pada server. Coba lagi beberapa saat.')
+  }
+
+  throw new Error(data?.message ?? 'Request gagal.')
+}
+```
+
+Ringkasnya:
+- `400 Bad Request`: perbaiki input dari user.
+- `404 Not Found`: data akun tidak ada atau upstream validator tidak menemukan hasil.
+- `500 Internal Server Error`: retry beberapa saat; bila berulang, tampilkan pesan maintenance.
+- `403 Forbidden`: origin browser tidak diizinkan oleh `ALLOWED_ORIGINS`.
 
 ---
 
@@ -349,7 +419,7 @@ async function validasiAkunGame(endpoint, id, zoneOrServer = null) {
     return data;
   } catch (error) {
     console.error("Gagal menghubungi server validator:", error);
-    return { success: false, message: "Gagal menghubungkan ke validator" };
+      return { success: false, message: "Gagal menghubungkan ke validator" };
   }
 }
 
